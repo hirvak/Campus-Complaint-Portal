@@ -1,17 +1,8 @@
-import enum
+from app.Utils.enums import UserRole
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
 from sqlalchemy.sql import func
 
 from app.Database.base import Base
-
-
-class UserRole(enum.Enum):
-    STUDENT = "Student"
-    FACULTY = "Faculty"
-    FACILITY_OFFICER = "Facility Officer"
-    MAINTENANCE_TEAM = "Maintenance Team"
-    ADMIN = "Administrator"
-
 
 class User(Base):
     __tablename__ = "users"

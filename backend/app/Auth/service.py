@@ -1,18 +1,34 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.Users.models import User
-from app.Users.schemas import UserRegister
+from app.Users.schemas import UserRegister,UserLogin
 from app.Security.password import hash_password,verify_password
 from app.Security.jwt_handler import create_access_token
+from app.Utils.enums import UserRole
+
 
 def register_user(user: UserRegister, db: Session):
 
+    user.email = user.email.strip().lower()
+    user.full_name = user.full_name.strip()
+    user.department = user.department.strip()
+
+    if user.phone:
+        user.phone = user.phone.strip()
     existing_user = db.query(User).filter(
         User.email == user.email
     ).first()
 
     if existing_user:
-        return None
-
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered."
+        )
+    if user.role not in [UserRole.STUDENT,UserRole.FACULTY]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only Student and Faculty can register."
+        )
     new_user = User(
         full_name=user.full_name,
         email=user.email,
@@ -29,10 +45,9 @@ def register_user(user: UserRegister, db: Session):
     return new_user
 
 
+def login_user(user: UserLogin, db: Session):
 
-
-def login_user(user, db: Session):
-
+    user.email = user.email.strip().lower()
     existing_user = db.query(User).filter(
         User.email == user.email
     ).first()
