@@ -1,5 +1,15 @@
+# Virtual Environment
 backend/venv/
+
+# Environment Variables
 backend/.env
-backend/__pycache__/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# VS Code
 .vscode/
+
+# Alembic cache
 *.pyc
