@@ -1,10 +1,18 @@
-from pydantic import BaseModel, EmailStr, Field
-from app.Utils.enums import UserRole
+from typing import Optional
+
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    model_validator
+)
+
+from app.Utils.enums import StudentType, UserRole
 
 
 class UserRegister(BaseModel):
     full_name: str = Field(
-        min_length=3,
+        min_length=2,
         max_length=100
     )
 
@@ -22,15 +30,38 @@ class UserRegister(BaseModel):
         max_length=100
     )
 
-    phone: str | None = Field(
+    phone: Optional[str] = Field(
         default=None,
-        max_length=15
+        max_length=20
     )
+
+    student_type: Optional[StudentType] = None
+
+    @model_validator(mode="after")
+    def validate_student_type(self):
+
+        if (
+            self.role == UserRole.STUDENT
+            and self.student_type is None
+        ):
+            raise ValueError(
+                "Student type is required for students."
+            )
+
+        if (
+            self.role != UserRole.STUDENT
+            and self.student_type is not None
+        ):
+            raise ValueError(
+                "Student type is only applicable to students."
+            )
+
+        return self
 
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=1)
+    password: str
 
 
 class UserResponse(BaseModel):
@@ -39,7 +70,8 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: UserRole
     department: str
-    phone: str | None
+    phone: Optional[str] = None
+    student_type: Optional[StudentType] = None
 
     class Config:
         from_attributes = True

@@ -5,6 +5,7 @@ from app.Departments.schemas import (
     DepartmentCreate,
     DepartmentUpdate
 )
+
 from app.Departments import repository
 
 
@@ -12,14 +13,11 @@ def create_department(
     db: Session,
     department: DepartmentCreate
 ):
-    department.name = department.name.strip()
-
-    if department.description:
-        department.description = department.description.strip()
+    name = department.name.strip()
 
     existing_department = repository.get_department_by_name(
         db,
-        department.name
+        name
     )
 
     if existing_department:
@@ -28,9 +26,11 @@ def create_department(
             detail="Department already exists."
         )
 
+    department.name = name
+
     return repository.create_department(
-        db=db,
-        department=department
+        db,
+        department
     )
 
 
@@ -74,30 +74,28 @@ def update_department(
             detail="Department not found."
         )
 
-    if updated_data.name:
-        updated_data.name = updated_data.name.strip()
+    name = updated_data.name.strip()
 
-        existing_department = repository.get_department_by_name(
-            db,
-            updated_data.name
+    existing_department = repository.get_department_by_name(
+        db,
+        name
+    )
+
+    if (
+        existing_department
+        and existing_department.id != department_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Department name already exists."
         )
 
-        if (
-            existing_department
-            and existing_department.id != department_id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Department name already exists."
-            )
-
-    if updated_data.description:
-        updated_data.description = updated_data.description.strip()
+    updated_data.name = name
 
     return repository.update_department(
-        db=db,
-        department=department,
-        updated_data=updated_data
+        db,
+        department,
+        updated_data
     )
 
 
@@ -117,8 +115,8 @@ def delete_department(
         )
 
     repository.delete_department(
-        db=db,
-        department=department
+        db,
+        department
     )
 
     return {

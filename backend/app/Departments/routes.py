@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.Database.dependencies import get_db
 from app.Departments.schemas import (
     DepartmentCreate,
     DepartmentUpdate,
-    DepartmentResponse,
+    DepartmentResponse
 )
 from app.Departments import service
-
 from app.Security.permissions import require_roles
 from app.Utils.enums import UserRole
+
 
 router = APIRouter(
     prefix="/departments",
@@ -20,8 +20,7 @@ router = APIRouter(
 
 @router.post(
     "/",
-    response_model=DepartmentResponse,
-    status_code=status.HTTP_201_CREATED
+    response_model=DepartmentResponse
 )
 def create_department(
     department: DepartmentCreate,
@@ -48,7 +47,7 @@ def get_departments(
             UserRole.STUDENT,
             UserRole.FACULTY,
             UserRole.FACILITY_OFFICER,
-            UserRole.MAINTENANCE_TEAM,
+            UserRole.MAINTENANCE_TEAM
         )
     )
 ):
@@ -68,7 +67,7 @@ def get_department(
             UserRole.STUDENT,
             UserRole.FACULTY,
             UserRole.FACILITY_OFFICER,
-            UserRole.MAINTENANCE_TEAM,
+            UserRole.MAINTENANCE_TEAM
         )
     )
 ):
@@ -93,12 +92,12 @@ def update_department(
     return service.update_department(
         db=db,
         department_id=department_id,
-        updated_data=updated_department)
+        updated_data=updated_department
+    )
 
 
 @router.delete(
-    "/{department_id}",
-    status_code=status.HTTP_200_OK
+    "/{department_id}"
 )
 def delete_department(
     department_id: int,

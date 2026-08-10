@@ -1,8 +1,14 @@
-import enum
+from enum import Enum
 
-class UserRole(enum.Enum):
+
+class UserRole(str, Enum):
+    ADMIN = "Administrator"
     STUDENT = "Student"
     FACULTY = "Faculty"
     FACILITY_OFFICER = "Facility Officer"
     MAINTENANCE_TEAM = "Maintenance Team"
-    ADMIN = "Administrator"
+
+
+class StudentType(str, Enum):
+    CAMPUS = "Campus"
+    HOSTEL = "Hostel"
