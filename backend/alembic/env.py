@@ -7,7 +7,7 @@ from app.Users.models import User
 from alembic import context
 from app.Departments.models import Department
 from app.Categories.models import Category
-
+from app.Complaints.models import Complaint
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

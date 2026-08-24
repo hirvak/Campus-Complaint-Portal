@@ -12,3 +12,19 @@ class UserRole(str, Enum):
 class StudentType(str, Enum):
     CAMPUS = "Campus"
     HOSTEL = "Hostel"
+
+
+class ComplaintStatus(str, Enum):
+    NEW = "New"
+    ASSIGNED = "Assigned"
+    IN_PROGRESS = "In Progress"
+    RESOLVED = "Resolved"
+    CLOSED = "Closed"
+    REOPENED = "Reopened"
+
+
+class ComplaintPriority(str, Enum):
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    CRITICAL = "Critical"

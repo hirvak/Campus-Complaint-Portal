@@ -80,3 +80,42 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class AdminCreateUser(BaseModel):
+    full_name: str = Field(
+        min_length=2,
+        max_length=100
+    )
+
+    email: EmailStr
+
+    password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+    role: UserRole
+
+    department: str = Field(
+        min_length=2,
+        max_length=100
+    )
+
+    phone: Optional[str] = Field(
+        default=None,
+        max_length=20
+    )
+
+    @model_validator(mode="after")
+    def validate_admin_created_role(self):
+
+        if self.role not in [
+            UserRole.FACILITY_OFFICER,
+            UserRole.MAINTENANCE_TEAM
+        ]:
+            raise ValueError(
+                "Admin can only create Facility Officer or Maintenance Team users."
+            )
+
+        return self
