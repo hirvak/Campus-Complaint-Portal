@@ -38,4 +38,11 @@ def get_current_user(
             detail="User not found"
         )
 
+    # Check whether the account is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated. Please contact the administrator."
+        )
+
     return user

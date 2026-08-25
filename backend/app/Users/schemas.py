@@ -72,17 +72,18 @@ class UserResponse(BaseModel):
     department: str
     phone: Optional[str] = None
     student_type: Optional[StudentType] = None
+    is_active: bool
 
     class Config:
         from_attributes = True
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
 class AdminCreateUser(BaseModel):
+    """
+    Used by Admin to create Facility Officer
+    or Maintenance Team accounts.
+    """
+
     full_name: str = Field(
         min_length=2,
         max_length=100
@@ -119,3 +120,16 @@ class AdminCreateUser(BaseModel):
             )
 
         return self
+
+
+class UserStatusUpdate(BaseModel):
+    """
+    Used by Admin to activate or deactivate a user.
+    """
+
+    is_active: bool
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

@@ -40,7 +40,7 @@ def register_user(
             detail="Only Student and Faculty can register."
         )
 
-    # Student must select Day Scholar or Hosteller
+    # Student must select Student Type
     if user.role == UserRole.STUDENT:
 
         if user.student_type is None:
@@ -49,7 +49,7 @@ def register_user(
                 detail="Student type is required for students."
             )
 
-    # Faculty cannot have a student type
+    # Faculty cannot have Student Type
     if user.role == UserRole.FACULTY:
 
         if user.student_type is not None:
@@ -85,15 +85,25 @@ def login_user(
         User.email == user.email
     ).first()
 
+    # User does not exist
     if not existing_user:
         return None
 
+    # User account is deactivated
+    if not existing_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated. Please contact the administrator."
+        )
+
+    # Verify password
     if not verify_password(
         user.password,
         existing_user.password_hash
     ):
         return None
 
+    # Generate JWT access token
     access_token = create_access_token(
         {
             "sub": existing_user.email,
