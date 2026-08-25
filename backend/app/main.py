@@ -6,7 +6,7 @@ from app.Departments.routes import router as department_router
 from app.Categories.routes import router as category_router
 from app.Complaints.routes import router as complaints_router
 from app.Notifications.routes import router as notifications_router
-
+from app.Dashboard.routes import router as dashboard_router
 
 app = FastAPI(
     title="Campus Complaint Portal"
@@ -19,3 +19,4 @@ app.include_router(users_router)
 app.include_router(department_router)
 app.include_router(category_router)
 app.include_router(notifications_router)
+app.include_router(dashboard_router)
