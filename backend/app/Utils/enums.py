@@ -38,3 +38,17 @@ class NotificationType(str, Enum):
     COMPLAINT_RESOLVED = "Complaint Resolved"
 
     COMPLAINT_REOPENED = "Complaint Reopened"
+
+class ComplaintHistoryAction(str, Enum):
+
+    CREATED = "Created"
+
+    ASSIGNED = "Assigned"
+
+    STATUS_UPDATED = "Status Updated"
+
+    RESOLVED = "Resolved"
+
+    CLOSED = "Closed"
+
+    REOPENED = "Reopened"

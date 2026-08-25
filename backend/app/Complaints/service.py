@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.ComplaintHistory import repository as history_repository
 from app.Complaints import repository
 from app.Complaints.models import Complaint
 from app.Complaints.schemas import (
@@ -10,16 +11,21 @@ from app.Complaints.schemas import (
     ComplaintResolve,
     ComplaintListResponse,
 )
+
 from app.Categories.models import Category
 from app.Users.models import User
 from app.Notifications.service import create_notification
+
 from app.Utils.enums import (
     UserRole,
     ComplaintStatus,
     ComplaintPriority,
     NotificationType,
+    ComplaintHistoryAction,
 )
+
 import math
+
 
 # =========================================================
 # HELPER — GET FACILITY OFFICER
@@ -90,13 +96,31 @@ def create_complaint(
         assigned_to=None
     )
 
-    # Save complaint first
+    # -----------------------------------------------------
+    # Save complaint
+    # -----------------------------------------------------
+
     complaint = repository.create_complaint(
         db=db,
         complaint=complaint
     )
 
+    # -----------------------------------------------------
+    # Create history
+    # -----------------------------------------------------
+
+    history_repository.create_history(
+        db=db,
+        complaint_id=complaint.id,
+        action=ComplaintHistoryAction.CREATED,
+        description="Complaint created.",
+        performed_by=current_user.id
+    )
+
+    # -----------------------------------------------------
     # Notify Facility Officer
+    # -----------------------------------------------------
+
     facility_officer = get_facility_officer(db)
 
     if facility_officer:
@@ -315,7 +339,25 @@ def assign_complaint(
         complaint
     )
 
+    # -----------------------------------------------------
+    # Create history
+    # -----------------------------------------------------
+
+    history_repository.create_history(
+        db=db,
+        complaint_id=complaint.id,
+        action=ComplaintHistoryAction.ASSIGNED,
+        description=(
+            f"Complaint assigned to "
+            f"{maintenance_member.full_name}."
+        ),
+        performed_by=current_user.id
+    )
+
+    # -----------------------------------------------------
     # Notify assigned Maintenance Team member
+    # -----------------------------------------------------
+
     create_notification(
         db=db,
         recipient_id=maintenance_member.id,
@@ -393,8 +435,35 @@ def update_complaint_status(
         complaint
     )
 
-    # Notify Student / Faculty when complaint is resolved
-    if new_status == ComplaintStatus.RESOLVED:
+    # -----------------------------------------------------
+    # Create history based on new status
+    # -----------------------------------------------------
+
+    if new_status == ComplaintStatus.IN_PROGRESS:
+
+        history_repository.create_history(
+            db=db,
+            complaint_id=complaint.id,
+            action=ComplaintHistoryAction.IN_PROGRESS,
+            description=(
+                "Complaint work started by maintenance team."
+            ),
+            performed_by=current_user.id
+        )
+
+    elif new_status == ComplaintStatus.RESOLVED:
+
+        history_repository.create_history(
+            db=db,
+            complaint_id=complaint.id,
+            action=ComplaintHistoryAction.RESOLVED,
+            description=(
+                "Complaint marked as resolved by maintenance team."
+            ),
+            performed_by=current_user.id
+        )
+
+        # Notify Student / Faculty
         create_notification(
             db=db,
             recipient_id=complaint.created_by,
@@ -463,7 +532,24 @@ def resolve_complaint(
         complaint
     )
 
+    # -----------------------------------------------------
+    # Create history
+    # -----------------------------------------------------
+
+    history_repository.create_history(
+        db=db,
+        complaint_id=complaint.id,
+        action=ComplaintHistoryAction.RESOLVED,
+        description=(
+            "Complaint resolved with resolution remarks."
+        ),
+        performed_by=current_user.id
+    )
+
+    # -----------------------------------------------------
     # Notify Student / Faculty
+    # -----------------------------------------------------
+
     create_notification(
         db=db,
         recipient_id=complaint.created_by,
@@ -523,10 +609,26 @@ def close_complaint(
 
     complaint.status = ComplaintStatus.CLOSED
 
-    return repository.update_complaint(
+    complaint = repository.update_complaint(
         db,
         complaint
     )
+
+    # -----------------------------------------------------
+    # Create history
+    # -----------------------------------------------------
+
+    history_repository.create_history(
+        db=db,
+        complaint_id=complaint.id,
+        action=ComplaintHistoryAction.CLOSED,
+        description=(
+            "Complaint closed by complaint creator."
+        ),
+        performed_by=current_user.id
+    )
+
+    return complaint
 
 
 # =========================================================
@@ -578,7 +680,24 @@ def reopen_complaint(
         complaint
     )
 
+    # -----------------------------------------------------
+    # Create history
+    # -----------------------------------------------------
+
+    history_repository.create_history(
+        db=db,
+        complaint_id=complaint.id,
+        action=ComplaintHistoryAction.REOPENED,
+        description=(
+            "Complaint reopened by complaint creator."
+        ),
+        performed_by=current_user.id
+    )
+
+    # -----------------------------------------------------
     # Notify Facility Officer
+    # -----------------------------------------------------
+
     facility_officer = get_facility_officer(db)
 
     if facility_officer:
@@ -596,6 +715,7 @@ def reopen_complaint(
 
     return complaint
 
+
 # =========================================================
 # SEARCH / FILTER / PAGINATION
 # =========================================================
@@ -611,7 +731,10 @@ def search_complaints(
     page: int = 1,
     page_size: int = 10
 ):
+    # -----------------------------------------------------
     # Validate pagination
+    # -----------------------------------------------------
+
     if page < 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -624,9 +747,9 @@ def search_complaints(
             detail="Page size must be between 1 and 100."
         )
 
-    # =====================================================
-    # ROLE-BASED FILTERING
-    # =====================================================
+    # -----------------------------------------------------
+    # Role-based filtering
+    # -----------------------------------------------------
 
     created_by = None
     assigned_to = None
@@ -655,10 +778,16 @@ def search_complaints(
             detail="You are not authorized to search complaints."
         )
 
+    # -----------------------------------------------------
     # Calculate offset
+    # -----------------------------------------------------
+
     skip = (page - 1) * page_size
 
+    # -----------------------------------------------------
     # Get complaints
+    # -----------------------------------------------------
+
     complaints = repository.search_complaints(
         db=db,
         search=search,
@@ -672,7 +801,10 @@ def search_complaints(
         limit=page_size
     )
 
+    # -----------------------------------------------------
     # Get total count
+    # -----------------------------------------------------
+
     total = repository.count_complaints(
         db=db,
         search=search,
@@ -683,6 +815,10 @@ def search_complaints(
         created_by=created_by,
         assigned_to=assigned_to
     )
+
+    # -----------------------------------------------------
+    # Calculate total pages
+    # -----------------------------------------------------
 
     total_pages = (
         math.ceil(total / page_size)

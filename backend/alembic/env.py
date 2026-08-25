@@ -9,6 +9,8 @@ from app.Departments.models import Department
 from app.Categories.models import Category
 from app.Complaints.models import Complaint
 from app.Notifications.models import Notification
+from app.ComplaintHistory.models import ComplaintHistory
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
