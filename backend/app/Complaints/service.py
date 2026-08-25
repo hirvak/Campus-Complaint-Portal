@@ -11,11 +11,30 @@ from app.Complaints.schemas import (
 )
 from app.Categories.models import Category
 from app.Users.models import User
+from app.Notifications.service import create_notification
 from app.Utils.enums import (
     UserRole,
     ComplaintStatus,
     ComplaintPriority,
+    NotificationType,
 )
+
+
+# =========================================================
+# HELPER — GET FACILITY OFFICER
+# =========================================================
+
+def get_facility_officer(
+    db: Session
+):
+    return (
+        db.query(User)
+        .filter(
+            User.role == UserRole.FACILITY_OFFICER,
+            User.is_active == True
+        )
+        .first()
+    )
 
 
 # =========================================================
@@ -70,10 +89,29 @@ def create_complaint(
         assigned_to=None
     )
 
-    return repository.create_complaint(
+    # Save complaint first
+    complaint = repository.create_complaint(
         db=db,
         complaint=complaint
     )
+
+    # Notify Facility Officer
+    facility_officer = get_facility_officer(db)
+
+    if facility_officer:
+        create_notification(
+            db=db,
+            recipient_id=facility_officer.id,
+            complaint_id=complaint.id,
+            title="New Complaint",
+            message=(
+                f"New complaint #{complaint.id} has been created: "
+                f"{complaint.title}"
+            ),
+            notification_type=NotificationType.COMPLAINT_CREATED
+        )
+
+    return complaint
 
 
 # =========================================================
@@ -271,10 +309,25 @@ def assign_complaint(
     complaint.priority = assignment_data.priority
     complaint.status = ComplaintStatus.ASSIGNED
 
-    return repository.update_complaint(
+    complaint = repository.update_complaint(
         db,
         complaint
     )
+
+    # Notify assigned Maintenance Team member
+    create_notification(
+        db=db,
+        recipient_id=maintenance_member.id,
+        complaint_id=complaint.id,
+        title="Complaint Assigned",
+        message=(
+            f"Complaint #{complaint.id} has been assigned to you: "
+            f"{complaint.title}"
+        ),
+        notification_type=NotificationType.COMPLAINT_ASSIGNED
+    )
+
+    return complaint
 
 
 # =========================================================
@@ -334,10 +387,26 @@ def update_complaint_status(
             detail="Invalid status transition."
         )
 
-    return repository.update_complaint(
+    complaint = repository.update_complaint(
         db,
         complaint
     )
+
+    # Notify Student / Faculty when complaint is resolved
+    if new_status == ComplaintStatus.RESOLVED:
+        create_notification(
+            db=db,
+            recipient_id=complaint.created_by,
+            complaint_id=complaint.id,
+            title="Complaint Resolved",
+            message=(
+                f"Your complaint #{complaint.id} has been resolved: "
+                f"{complaint.title}"
+            ),
+            notification_type=NotificationType.COMPLAINT_RESOLVED
+        )
+
+    return complaint
 
 
 # =========================================================
@@ -388,10 +457,25 @@ def resolve_complaint(
 
     complaint.status = ComplaintStatus.RESOLVED
 
-    return repository.update_complaint(
+    complaint = repository.update_complaint(
         db,
         complaint
     )
+
+    # Notify Student / Faculty
+    create_notification(
+        db=db,
+        recipient_id=complaint.created_by,
+        complaint_id=complaint.id,
+        title="Complaint Resolved",
+        message=(
+            f"Your complaint #{complaint.id} has been resolved: "
+            f"{complaint.title}"
+        ),
+        notification_type=NotificationType.COMPLAINT_RESOLVED
+    )
+
+    return complaint
 
 
 # =========================================================
@@ -488,7 +572,25 @@ def reopen_complaint(
 
     complaint.status = ComplaintStatus.REOPENED
 
-    return repository.update_complaint(
+    complaint = repository.update_complaint(
         db,
         complaint
     )
+
+    # Notify Facility Officer
+    facility_officer = get_facility_officer(db)
+
+    if facility_officer:
+        create_notification(
+            db=db,
+            recipient_id=facility_officer.id,
+            complaint_id=complaint.id,
+            title="Complaint Reopened",
+            message=(
+                f"Complaint #{complaint.id} has been reopened: "
+                f"{complaint.title}"
+            ),
+            notification_type=NotificationType.COMPLAINT_REOPENED
+        )
+
+    return complaint

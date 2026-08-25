@@ -28,3 +28,13 @@ class ComplaintPriority(str, Enum):
     MEDIUM = "Medium"
     HIGH = "High"
     CRITICAL = "Critical"
+
+class NotificationType(str, Enum):
+
+    COMPLAINT_CREATED = "Complaint Created"
+
+    COMPLAINT_ASSIGNED = "Complaint Assigned"
+
+    COMPLAINT_RESOLVED = "Complaint Resolved"
+
+    COMPLAINT_REOPENED = "Complaint Reopened"
