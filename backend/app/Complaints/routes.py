@@ -8,13 +8,21 @@ from app.Auth.dependencies import get_current_user
 from app.Users.models import User
 
 from app.Complaints import service
+
 from app.Complaints.schemas import (
     ComplaintCreate,
     ComplaintResponse,
     ComplaintAssign,
     ComplaintStatusUpdate,
     ComplaintResolve,
+    ComplaintListResponse,
 )
+
+from app.Utils.enums import (
+    ComplaintStatus,
+    ComplaintPriority
+)
+
 
 router = APIRouter(
     prefix="/complaints",
@@ -117,6 +125,38 @@ def get_all_complaints(
     return service.get_all_complaints(
         db=db,
         current_user=current_user
+    )
+
+
+# =========================================================
+# SEARCH / FILTER / PAGINATION
+# =========================================================
+
+@router.get(
+    "/search",
+    response_model=ComplaintListResponse
+)
+def search_complaints(
+    search: str | None = None,
+    status_filter: ComplaintStatus | None = None,
+    priority: ComplaintPriority | None = None,
+    category_id: int | None = None,
+    department_id: int | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return service.search_complaints(
+        db=db,
+        current_user=current_user,
+        search=search,
+        complaint_status=status_filter,
+        priority=priority,
+        category_id=category_id,
+        department_id=department_id,
+        page=page,
+        page_size=page_size
     )
 
 

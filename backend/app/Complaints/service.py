@@ -8,6 +8,7 @@ from app.Complaints.schemas import (
     ComplaintAssign,
     ComplaintStatusUpdate,
     ComplaintResolve,
+    ComplaintListResponse,
 )
 from app.Categories.models import Category
 from app.Users.models import User
@@ -18,7 +19,7 @@ from app.Utils.enums import (
     ComplaintPriority,
     NotificationType,
 )
-
+import math
 
 # =========================================================
 # HELPER — GET FACILITY OFFICER
@@ -594,3 +595,105 @@ def reopen_complaint(
         )
 
     return complaint
+
+# =========================================================
+# SEARCH / FILTER / PAGINATION
+# =========================================================
+
+def search_complaints(
+    db: Session,
+    current_user: User,
+    search: str | None = None,
+    complaint_status: ComplaintStatus | None = None,
+    priority: ComplaintPriority | None = None,
+    category_id: int | None = None,
+    department_id: int | None = None,
+    page: int = 1,
+    page_size: int = 10
+):
+    # Validate pagination
+    if page < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Page must be greater than or equal to 1."
+        )
+
+    if page_size < 1 or page_size > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Page size must be between 1 and 100."
+        )
+
+    # =====================================================
+    # ROLE-BASED FILTERING
+    # =====================================================
+
+    created_by = None
+    assigned_to = None
+
+    # Student / Faculty
+    if current_user.role in [
+        UserRole.STUDENT,
+        UserRole.FACULTY
+    ]:
+        created_by = current_user.id
+
+    # Maintenance Team
+    elif current_user.role == UserRole.MAINTENANCE_TEAM:
+        assigned_to = current_user.id
+
+    # Admin / Facility Officer
+    elif current_user.role in [
+        UserRole.ADMIN,
+        UserRole.FACILITY_OFFICER
+    ]:
+        pass
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to search complaints."
+        )
+
+    # Calculate offset
+    skip = (page - 1) * page_size
+
+    # Get complaints
+    complaints = repository.search_complaints(
+        db=db,
+        search=search,
+        complaint_status=complaint_status,
+        priority=priority,
+        category_id=category_id,
+        department_id=department_id,
+        created_by=created_by,
+        assigned_to=assigned_to,
+        skip=skip,
+        limit=page_size
+    )
+
+    # Get total count
+    total = repository.count_complaints(
+        db=db,
+        search=search,
+        complaint_status=complaint_status,
+        priority=priority,
+        category_id=category_id,
+        department_id=department_id,
+        created_by=created_by,
+        assigned_to=assigned_to
+    )
+
+    total_pages = (
+        math.ceil(total / page_size)
+        if total > 0
+        else 0
+    )
+
+    return ComplaintListResponse(
+        items=complaints,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
