@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-page: #F5F0E7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-secondary: #FAF7F0;
+  --bg-surface-elevated: #FFFFFF;
+
+  --text-primary: #10213A;
+  --text-secondary: #60708A;
+  --text-muted: #60708A;
+
+  --border: #DED8CC;
+
+  --primary: #B51232;
+  --primary-hover: #94102A;
+  --primary-light: #FDF2F4;
+
+  --success: #008A4A;
+  --success-bg: #E8F5EC;
+  --success-border: #A7F3D0;
+
+  --warning: #B66A00;
+  --warning-bg: #FEF3C7;
+  --warning-border: #FDE68A;
+
+  --error: #B51232;
+  --error-bg: #FDF2F4;
+  --error-border: #F8D7DA;
+
+  --input-bg: #FFFFFF;
+  --input-border: #DED8CC;
+  --table-hover: #FAF7F0;
+}
+
+.dark {
+  --bg-page: #111827;
+  --bg-surface: #182235;
+  --bg-surface-secondary: #202B3D;
+  --bg-surface-elevated: #263246;
+
+  --text-primary: #F8FAFC;
+  --text-secondary: #AEB9C9;
+  --text-muted: #7F8CA1;
+
+  --border: #344155;
+
+  --primary: #C51F3D;
+  --primary-hover: #A91531;
+  --primary-light: rgba(197, 31, 61, 0.15);
+
+  --success: #22A06B;
+  --success-bg: rgba(34, 160, 107, 0.15);
+  --success-border: rgba(34, 160, 107, 0.3);
+
+  --warning: #D18A16;
+  --warning-bg: rgba(209, 138, 22, 0.15);
+  --warning-border: rgba(209, 138, 22, 0.3);
+
+  --error: #D6455D;
+  --error-bg: rgba(214, 69, 93, 0.15);
+  --error-border: rgba(214, 69, 93, 0.3);
+
+  --input-bg: #202B3D;
+  --input-border: #344155;
+  --table-hover: #202B3D;
+}
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif;
+    font-weight: 700;
+  }
+
+  .font-sans {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .font-label {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* Custom status badges with dark mode support */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  font-size: 0.6875rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 4px;
+}
+
+.status-new {
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.status-assigned {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.status-in-progress {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.status-resolved {
+  background-color: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.status-closed {
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.status-reopened {
+  background-color: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
