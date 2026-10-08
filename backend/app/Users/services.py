@@ -91,11 +91,14 @@ def get_all_users(
     db: Session,
     current_user: User
 ):
-    # Only Admin can view all users
-    if current_user.role != UserRole.ADMIN:
+    # Only Admin and Facility Officer can view all users
+    if current_user.role not in [
+        UserRole.ADMIN,
+        UserRole.FACILITY_OFFICER
+    ]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can view all users."
+            detail="Only administrators and facility officers can view users."
         )
 
     return (

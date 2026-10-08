@@ -45,6 +45,8 @@ class ComplaintHistoryAction(str, Enum):
 
     ASSIGNED = "Assigned"
 
+    IN_PROGRESS = "In Progress"
+
     STATUS_UPDATED = "Status Updated"
 
     RESOLVED = "Resolved"

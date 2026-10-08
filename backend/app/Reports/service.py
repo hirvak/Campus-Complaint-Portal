@@ -296,3 +296,179 @@ def get_complete_report(
             current_user=current_user
         )
     )
+
+
+# =========================================================
+# EXPORT REPORTS (CSV / PDF)
+# Admin Only
+# =========================================================
+
+def export_reports(
+    db: Session,
+    format_type: str,
+    current_user: User
+):
+    import csv
+    import io
+    from datetime import datetime
+    from fastapi.responses import Response
+    from app.Complaints.models import Complaint
+    from app.Categories.models import Category
+    from app.Departments.models import Department
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Fetch lookup dictionaries
+    cats = {c.id: c.name for c in db.query(Category).all()}
+    depts = {d.id: d.name for d in db.query(Department).all()}
+    users = {u.id: u.full_name for u in db.query(User).all()}
+
+    complaints = db.query(Complaint).order_by(Complaint.id.asc()).all()
+
+    if format_type == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "Complaint ID",
+            "Title",
+            "Category",
+            "Department",
+            "Priority",
+            "Status",
+            "Location",
+            "Created Date",
+            "Assigned Member",
+            "Resolution Remarks",
+            "Last Updated Date"
+        ])
+
+        for c in complaints:
+            writer.writerow([
+                f"#{c.id}",
+                c.title,
+                cats.get(c.category_id, f"Category #{c.category_id}"),
+                depts.get(c.department_id, f"Department #{c.department_id}"),
+                c.priority.value if hasattr(c.priority, 'value') else str(c.priority),
+                c.status.value if hasattr(c.status, 'value') else str(c.status),
+                c.location,
+                c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else "",
+                users.get(c.assigned_to, "Unassigned") if c.assigned_to else "Unassigned",
+                c.resolution_remarks or "",
+                c.updated_at.strftime("%Y-%m-%d %H:%M:%S") if c.updated_at else ""
+            ])
+
+        filename = f"campuscare_report_{timestamp}.csv"
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+
+    elif format_type == "pdf":
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36
+        )
+
+        styles = getSampleStyleSheet()
+        elements = []
+
+        title_style = ParagraphStyle(
+            'ReportTitle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=16,
+            leading=20,
+            textColor=colors.HexColor('#B51232'),
+            spaceAfter=4
+        )
+
+        subtitle_style = ParagraphStyle(
+            'ReportSubtitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=9,
+            leading=11,
+            textColor=colors.HexColor('#10213A'),
+            spaceAfter=15
+        )
+
+        normal_style = styles['Normal']
+        normal_style.fontSize = 8
+        normal_style.leading = 10
+
+        # Title Header
+        elements.append(Paragraph("CampusCare — Campus Complaint Portal", title_style))
+        elements.append(Paragraph(f"OFFICIAL ADMINISTRATIVE AUDIT REPORT • Generated {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", subtitle_style))
+
+        # Executive Summary Table
+        summary = get_report_summary(db, current_user)
+        summary_data = [
+            ["Metric", "Count", "Metric", "Count"],
+            ["Total Complaints", str(summary.total_complaints), "Low Priority", str(summary.low_priority)],
+            ["New Complaints", str(summary.new_complaints), "Medium Priority", str(summary.medium_priority)],
+            ["Assigned Complaints", str(summary.assigned_complaints), "High Priority", str(summary.high_priority)],
+            ["In Progress Complaints", str(summary.in_progress_complaints), "Resolved Complaints", str(summary.resolved_complaints)],
+            ["Closed Complaints", str(summary.closed_complaints), "Reopened Complaints", str(summary.reopened_complaints)]
+        ]
+
+        summary_table = Table(summary_data, colWidths=[140, 100, 140, 100])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#10213A')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DED8CC')),
+            ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#FAF7F0')),
+        ]))
+
+        elements.append(Paragraph("EXECUTIVE COMPLAINT SUMMARY", ParagraphStyle('SectionHeader', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#B51232'), spaceAfter=6)))
+        elements.append(summary_table)
+        elements.append(Spacer(1, 15))
+
+        # Complaints Breakdown Table
+        elements.append(Paragraph("COMPLAINTS DIRECTORY BREAKDOWN", ParagraphStyle('SectionHeader2', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#B51232'), spaceAfter=6)))
+
+        table_data = [["ID", "Title", "Category", "Department", "Priority", "Status", "Date"]]
+        for c in complaints[:60]:
+            table_data.append([
+                f"#{c.id}",
+                Paragraph(c.title[:45], normal_style),
+                cats.get(c.category_id, f"Cat #{c.category_id}"),
+                depts.get(c.department_id, f"Dept #{c.department_id}"),
+                c.priority.value if hasattr(c.priority, 'value') else str(c.priority),
+                c.status.value if hasattr(c.status, 'value') else str(c.status),
+                c.created_at.strftime("%Y-%m-%d") if c.created_at else "—"
+            ])
+
+        comp_table = Table(table_data, colWidths=[35, 140, 85, 95, 55, 65, 55])
+        comp_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#B51232')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DED8CC')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+
+        elements.append(comp_table)
+        doc.build(elements)
+
+        filename = f"campuscare_report_{timestamp}.pdf"
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )

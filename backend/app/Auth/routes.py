@@ -6,9 +6,10 @@ from app.Users.schemas import (
     UserRegister,
     UserResponse,
     UserLogin,
-    Token
+    Token,
+    GoogleAuthLogin
 )
-from app.Auth.service import register_user, login_user
+from app.Auth.service import register_user, login_user, google_login_user
 
 
 router = APIRouter(
@@ -46,3 +47,14 @@ def login(
         )
 
     return token
+
+
+@router.post(
+    "/google",
+    response_model=Token
+)
+def google_auth(
+    data: GoogleAuthLogin,
+    db: Session = Depends(get_db)
+):
+    return google_login_user(data, db)

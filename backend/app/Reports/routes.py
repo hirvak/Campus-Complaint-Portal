@@ -167,3 +167,33 @@ def get_department_report(
         db=db,
         current_user=current_user
     )
+
+
+# =========================================================
+# EXPORT REPORTS (CSV / PDF)
+# Admin Only
+# =========================================================
+
+@router.get(
+    "/export"
+)
+def export_reports(
+    format: str = "csv",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    require_admin(current_user)
+
+    fmt = format.lower().strip()
+    if fmt not in ["csv", "pdf"]:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid format. Format must be 'csv' or 'pdf'."
+        )
+
+    return service.export_reports(
+        db=db,
+        format_type=fmt,
+        current_user=current_user
+    )
