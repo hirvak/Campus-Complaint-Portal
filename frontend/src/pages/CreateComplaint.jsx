@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { PlusSquare, ArrowLeft, AlertCircle, CheckCircle2, Info, ArrowRight } from 'lucide-react';
+import {
+  PlusSquare,
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  ArrowRight,
+  UploadCloud,
+  Image as ImageIcon,
+  Trash2,
+  RefreshCw
+} from 'lucide-react';
 
 export function CreateComplaint() {
   const navigate = useNavigate();
@@ -13,7 +24,10 @@ export function CreateComplaint() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [location, setLocation] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState('');
+  const fileInputRef = useRef(null);
 
   const [categories, setCategories] = useState([]);
   const [departmentsMap, setDepartmentsMap] = useState({});
@@ -53,6 +67,53 @@ export function CreateComplaint() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    setImageError('');
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setImageError('Only JPG, JPEG, PNG, and WEBP image formats are supported.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+    if (file.size > maxSize) {
+      setImageError('File size exceeds the 5 MB limit. Please select a smaller image.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedImage(null);
+    setImagePreview(null);
+    setImageError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const selectedCategoryObj = categories.find((c) => String(c.id) === String(categoryId));
   const autoMappedDeptName = selectedCategoryObj
     ? departmentsMap[selectedCategoryObj.department_id] || `Department #${selectedCategoryObj.department_id}`
@@ -82,13 +143,16 @@ export function CreateComplaint() {
 
     setSubmitting(true);
     try {
-      await api.complaints.create({
-        title: title.trim(),
-        description: description.trim(),
-        category_id: Number(categoryId),
-        location: location.trim(),
-        image_url: imageUrl.trim() || null,
-      });
+      const formData = new FormData();
+      formData.append('title', title.trim());
+      formData.append('description', description.trim());
+      formData.append('category_id', String(categoryId));
+      formData.append('location', location.trim());
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+
+      await api.complaints.create(formData);
 
       setSuccessMessage('Complaint created successfully! Routing to department...');
       setTimeout(() => {
@@ -224,18 +288,91 @@ export function CreateComplaint() {
               />
             </div>
 
-            {/* Image URL (Optional) */}
-            <div>
-              <label className="block text-xs font-label uppercase tracking-wider text-[#10213A] dark:text-[#F8FAFC] mb-1.5">
-                Image URL (Optional)
+            {/* Upload Image (Optional) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-label uppercase tracking-wider text-[#10213A] dark:text-[#F8FAFC]">
+                Upload Image (Optional)
               </label>
+
               <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://example.com/photo.jpg"
-                className="w-full text-sm p-3 bg-white dark:bg-[#202B3D] border border-[#DED8CC] dark:border-[#344155] rounded-[6px] text-[#10213A] dark:text-[#F8FAFC] focus:outline-none focus:ring-1 focus:ring-[#B51232] dark:focus:ring-[#C51F3D]"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageSelect}
+                className="hidden"
+                id="complaint-image-input"
               />
+
+              {!imagePreview ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-[#DED8CC] dark:border-[#344155] hover:border-[#B51232] dark:hover:border-[#C51F3D] rounded-[8px] p-6 text-center cursor-pointer transition-colors bg-[#FAF7F0]/40 dark:bg-[#202B3D]/40 hover:bg-[#FAF7F0] dark:hover:bg-[#202B3D] group"
+                >
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <div className="w-10 h-10 rounded-full bg-white dark:bg-[#182235] border border-[#DED8CC] dark:border-[#344155] flex items-center justify-center text-[#60708A] dark:text-[#AEB9C9] group-hover:text-[#B51232] dark:group-hover:text-[#C51F3D] transition-colors shadow-2xs">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-[#B51232] dark:text-[#C51F3D] underline">
+                        Click to select an image
+                      </span>
+                      <span className="text-xs text-[#60708A] dark:text-[#AEB9C9]"> from your device</span>
+                    </div>
+                    <p className="text-[11px] text-[#60708A] dark:text-[#AEB9C9]">
+                      Supports JPG, JPEG, PNG, WEBP (Max 5 MB)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-[#DED8CC] dark:border-[#344155] rounded-[8px] p-4 bg-[#FAF7F0] dark:bg-[#202B3D] space-y-3">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="relative w-full sm:w-48 h-36 rounded-[6px] overflow-hidden border border-[#DED8CC] dark:border-[#344155] bg-black/5 dark:bg-black/20 flex items-center justify-center shrink-0">
+                      <img
+                        src={imagePreview}
+                        alt="Complaint preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 w-full space-y-2 text-left">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-[#10213A] dark:text-[#F8FAFC]">
+                          <ImageIcon className="w-4 h-4 text-[#B51232] dark:text-[#C51F3D]" />
+                          <span className="truncate max-w-xs">{selectedImage?.name}</span>
+                        </div>
+                        <p className="text-[11px] text-[#60708A] dark:text-[#AEB9C9]">
+                          Size: {selectedImage ? (selectedImage.size / (1024 * 1024)).toFixed(2) : 0} MB
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-3 py-1.5 text-xs font-semibold text-[#10213A] dark:text-[#F8FAFC] bg-white dark:bg-[#182235] border border-[#DED8CC] dark:border-[#344155] hover:border-[#B51232] dark:hover:border-[#C51F3D] rounded-[4px] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="px-3 py-1.5 text-xs font-semibold text-[#B51232] dark:text-[#D6455D] bg-[#FDF2F4] dark:bg-[#D6455D]/15 border border-[#F8D7DA] dark:border-[#D6455D]/30 hover:bg-[#FCE8EB] rounded-[4px] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {imageError && (
+                <div className="flex items-center gap-1.5 text-xs text-[#B51232] dark:text-[#D6455D] mt-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{imageError}</span>
+                </div>
+              )}
             </div>
 
             {/* Buttons */}

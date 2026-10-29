@@ -3,6 +3,8 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from './StatusBadge';
 import Button from './Button';
+import ComplaintPhoto from './ComplaintPhoto';
+import SlaTracker from './SlaTracker';
 import {
   X,
   Clock,
@@ -201,6 +203,12 @@ export function ComplaintDetailsModal({ complaintId, onClose, onRefresh }) {
                 </p>
               </div>
 
+              {/* Attached Photo */}
+              {complaint.image_url && (
+                <ComplaintPhoto imageUrl={complaint.image_url} title={complaint.title} />
+              )}
+
+
               {/* Grid Metadata */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="bg-white dark:bg-[#182235] border border-[#DED8CC] dark:border-[#344155] p-3 rounded-[6px]">
@@ -226,6 +234,9 @@ export function ComplaintDetailsModal({ complaintId, onClose, onRefresh }) {
                   </p>
                 </div>
               </div>
+
+              {/* SLA Resolution & Escalation Tracker */}
+              <SlaTracker complaint={complaint} historyLogs={historyLogs} loading={loading} />
 
               {/* Resolution Remarks if available */}
               {complaint.resolution_remarks && (

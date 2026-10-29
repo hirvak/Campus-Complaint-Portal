@@ -116,6 +116,16 @@ class ComplaintResponse(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
+    # SLA and Escalation tracking fields
+    sla_deadline: Optional[datetime] = None
+    is_escalated: bool = False
+    escalated_at: Optional[datetime] = None
+    escalation_level: int = 0
+    is_grandfathered: bool = False
+    sla_cycle: int = 1
+    sla_status: Optional[str] = None
+    time_remaining_seconds: Optional[int] = None
+
     class Config:
         from_attributes = True
 

@@ -217,9 +217,4 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-
-class GoogleAuthLogin(BaseModel):
-    id_token: str
-    role: Optional[UserRole] = None
-    student_type: Optional[StudentType] = None
-    department: Optional[str] = None
+

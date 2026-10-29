@@ -20,6 +20,7 @@ import UserManagement from '../pages/admin/UserManagement';
 import DepartmentManagement from '../pages/admin/DepartmentManagement';
 import CategoryManagement from '../pages/admin/CategoryManagement';
 import ReportsAnalytics from '../pages/admin/ReportsAnalytics';
+import SlaManagement from '../pages/admin/SlaManagement';
 
 import StudentDashboard from '../pages/dashboards/StudentDashboard';
 import FacultyDashboard from '../pages/dashboards/FacultyDashboard';
@@ -332,6 +333,14 @@ export function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Administrator']}>
             <ReportsAnalytics />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/sla"
+        element={
+          <ProtectedRoute allowedRoles={['Administrator']}>
+            <SlaManagement />
           </ProtectedRoute>
         }
       />

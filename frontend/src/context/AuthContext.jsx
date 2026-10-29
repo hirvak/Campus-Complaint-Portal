@@ -46,19 +46,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const googleLogin = async ({ id_token, role, student_type, department }) => {
-    setError(null);
-    try {
-      await api.auth.googleLogin({ id_token, role, student_type, department });
-      const userData = await api.auth.getCurrentUser();
-      setUser(userData);
-      return userData;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
-
   const register = async (userData) => {
     setError(null);
     try {
@@ -99,7 +86,6 @@ export function AuthProvider({ children }) {
         loading,
         error,
         login,
-        googleLogin,
         register,
         logout,
         refreshUser,

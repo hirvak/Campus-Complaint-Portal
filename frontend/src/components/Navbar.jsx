@@ -18,6 +18,7 @@ import {
   Building,
   Tag,
   BarChart3,
+  Sliders,
   Sun,
   Moon
 } from 'lucide-react';
@@ -94,6 +95,7 @@ export function Navbar() {
           { name: 'Users', path: '/admin/users', icon: Users },
           { name: 'Departments', path: '/admin/departments', icon: Building },
           { name: 'Categories', path: '/admin/categories', icon: Tag },
+          { name: 'SLA Targets', path: '/admin/sla', icon: Sliders },
           { name: 'Complaints', path: '/admin/complaints', icon: FileText },
           { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
           { name: 'Notifications', path: '/admin/notifications', icon: Bell },

@@ -18,9 +18,12 @@ async function request(endpoint, options = {}) {
   const token = localStorage.getItem('access_token');
 
   const headers = {
-    'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
+
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -73,21 +76,6 @@ export const api = {
       return data;
     },
 
-    googleLogin: async ({ id_token, role, student_type, department }) => {
-      const data = await request('/auth/google', {
-        method: 'POST',
-        body: JSON.stringify({
-          id_token,
-          ...(role ? { role } : {}),
-          ...(student_type ? { student_type } : {}),
-          ...(department ? { department } : {}),
-        }),
-      });
-      if (data.access_token) {
-        localStorage.setItem('access_token', data.access_token);
-      }
-      return data;
-    },
 
     register: async (userData) => {
       const payload = {
@@ -217,8 +205,14 @@ export const api = {
 
   // Complaints endpoints
   complaints: {
-    create: async (complaintData) =>
-      request('/complaints/', {
+    create: async (complaintData) => {
+      if (complaintData instanceof FormData) {
+        return request('/complaints/', {
+          method: 'POST',
+          body: complaintData,
+        });
+      }
+      return request('/complaints/', {
         method: 'POST',
         body: JSON.stringify({
           title: complaintData.title,
@@ -227,7 +221,17 @@ export const api = {
           location: complaintData.location,
           image_url: complaintData.image_url || null,
         }),
-      }),
+      });
+    },
+
+    uploadImage: async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request('/complaints/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+    },
 
     getMyComplaints: async () => request('/complaints/my', { method: 'GET' }),
     getAssignedComplaints: async () => request('/complaints/assigned', { method: 'GET' }),
@@ -277,5 +281,22 @@ export const api = {
 
     close: async (id) => request(`/complaints/${id}/close`, { method: 'POST' }),
     reopen: async (id) => request(`/complaints/${id}/reopen`, { method: 'POST' }),
+  },
+
+  // SLA and Escalation endpoints
+  sla: {
+    getConfigs: async () => request('/sla/configs', { method: 'GET' }),
+    createConfig: async (configData) =>
+      request('/sla/configs', {
+        method: 'POST',
+        body: JSON.stringify(configData),
+      }),
+    updateConfig: async (id, updateData) =>
+      request(`/sla/configs/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updateData),
+      }),
+    checkNow: async () => request('/sla/check-now', { method: 'POST' }),
+    getWorkerStatus: async () => request('/sla/worker-status', { method: 'GET' }),
   },
 };

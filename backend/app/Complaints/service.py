@@ -24,7 +24,73 @@ from app.Utils.enums import (
     ComplaintHistoryAction,
 )
 
+from datetime import datetime, timezone, timedelta
+from app.SLA.service import calculate_deadline, get_applicable_sla
+
 import math
+import os
+import uuid
+import io
+from PIL import Image
+
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+ALLOWED_IMAGE_FORMATS = {
+    "JPEG": ".jpg",
+    "PNG": ".png",
+    "WEBP": ".webp",
+}
+
+async def save_complaint_image(file_obj) -> str:
+    """
+    Validates and securely stores an uploaded complaint image file.
+    Enforces 5 MB size limit and image format validation via Pillow.
+    Returns relative URL path: /uploads/complaints/<unique_filename>
+    """
+    if not file_obj:
+        return None
+
+    contents = await file_obj.read()
+    if not contents or len(contents) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded image file is empty."
+        )
+
+    if len(contents) > MAX_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Image size exceeds maximum allowed limit of 5 MB."
+        )
+
+    try:
+        image = Image.open(io.BytesIO(contents))
+        image.verify()
+        img_format = (image.format or "").upper()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or corrupt image file. Only valid JPG, JPEG, PNG, and WEBP images are accepted."
+        )
+
+    if img_format not in ALLOWED_IMAGE_FORMATS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported image format: {img_format}. Allowed formats: JPG, JPEG, PNG, WEBP."
+        )
+
+    extension = ALLOWED_IMAGE_FORMATS[img_format]
+    unique_filename = f"complaint_{uuid.uuid4().hex}{extension}"
+
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    upload_dir = os.path.join(base_dir, "uploads", "complaints")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    destination_path = os.path.join(upload_dir, unique_filename)
+    with open(destination_path, "wb") as f:
+        f.write(contents)
+
+    return f"/uploads/complaints/{unique_filename}"
+
 
 
 # =========================================================
@@ -83,6 +149,13 @@ def create_complaint(
     # Department is automatically taken from Category
     department_id = category.department_id
 
+    # Calculate SLA target deadline (SLA starts immediately on complaint creation)
+    initial_deadline = calculate_deadline(
+        db=db,
+        category_id=category.id,
+        priority=ComplaintPriority.MEDIUM
+    )
+
     complaint = Complaint(
         title=complaint_data.title.strip(),
         description=complaint_data.description.strip(),
@@ -93,7 +166,13 @@ def create_complaint(
         created_by=current_user.id,
         status=ComplaintStatus.NEW,
         priority=ComplaintPriority.MEDIUM,
-        assigned_to=None
+        assigned_to=None,
+        sla_deadline=initial_deadline,
+        sla_cycle=1,
+        is_escalated=False,
+        escalated_at=None,
+        escalation_level=0,
+        is_grandfathered=False
     )
 
     # -----------------------------------------------------
@@ -330,9 +409,20 @@ def assign_complaint(
             detail="Active maintenance team member not found."
         )
 
+    old_priority = complaint.priority
     complaint.assigned_to = maintenance_member.id
     complaint.priority = assignment_data.priority
     complaint.status = ComplaintStatus.ASSIGNED
+
+    # Recalculate SLA deadline if priority has changed
+    if old_priority != assignment_data.priority:
+        start_ref = complaint.created_at or datetime.now(timezone.utc)
+        complaint.sla_deadline = calculate_deadline(
+            db=db,
+            category_id=complaint.category_id,
+            priority=assignment_data.priority,
+            start_time=start_ref
+        )
 
     complaint = repository.update_complaint(
         db,
@@ -673,7 +763,28 @@ def reopen_complaint(
             detail="Only resolved complaints can be reopened."
         )
 
+    # -----------------------------------------------------
+    # Multi-cycle SLA reset:
+    # 1. Increment sla_cycle (starts new cycle for auditability and repeat escalations)
+    # 2. Clear is_grandfathered (reopened complaint is now active and monitored)
+    # 3. Reset current-cycle escalation state
+    # 4. Calculate fresh deadline from current reopen timestamp
+    # -----------------------------------------------------
+    reopen_time = datetime.now(timezone.utc)
+    new_deadline = calculate_deadline(
+        db=db,
+        category_id=complaint.category_id,
+        priority=complaint.priority,
+        start_time=reopen_time
+    )
+
     complaint.status = ComplaintStatus.REOPENED
+    complaint.sla_cycle = (complaint.sla_cycle or 1) + 1
+    complaint.is_grandfathered = False
+    complaint.is_escalated = False
+    complaint.escalated_at = None
+    complaint.escalation_level = 0
+    complaint.sla_deadline = new_deadline
 
     complaint = repository.update_complaint(
         db,
@@ -689,7 +800,8 @@ def reopen_complaint(
         complaint_id=complaint.id,
         action=ComplaintHistoryAction.REOPENED,
         description=(
-            "Complaint reopened by complaint creator."
+            f"Complaint reopened by complaint creator (Cycle {complaint.sla_cycle}). "
+            f"New SLA deadline: {new_deadline.strftime('%Y-%m-%d %H:%M:%S UTC')}."
         ),
         performed_by=current_user.id
     )

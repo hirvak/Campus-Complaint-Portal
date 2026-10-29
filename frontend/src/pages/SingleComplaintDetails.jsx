@@ -4,6 +4,8 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import Button from '../components/Button';
+import ComplaintPhoto from '../components/ComplaintPhoto';
+import SlaTracker from '../components/SlaTracker';
 import {
   ArrowLeft,
   Clock,
@@ -182,6 +184,16 @@ export function SingleComplaintDetails() {
                 {complaint.description}
               </p>
             </div>
+
+            {/* Attached Photo */}
+            {complaint.image_url && (
+              <div className="border-b border-[#DED8CC] dark:border-[#344155] pb-6">
+                <ComplaintPhoto imageUrl={complaint.image_url} title={complaint.title} />
+              </div>
+            )}
+
+            {/* SLA Resolution & Escalation Tracker */}
+            <SlaTracker complaint={complaint} historyLogs={historyLogs} loading={loading} />
 
             {/* Complaint Information Strip */}
             <div className="space-y-3 border-b border-[#DED8CC] dark:border-[#344155] pb-6">

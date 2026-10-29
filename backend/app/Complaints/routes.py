@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request, UploadFile, File, HTTPException
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -40,16 +41,99 @@ router = APIRouter(
     response_model=ComplaintResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_complaint(
-    complaint: ComplaintCreate,
+async def create_complaint(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        title = form.get("title")
+        description = form.get("description")
+        category_id = form.get("category_id")
+        location = form.get("location")
+        file_obj = form.get("image") or form.get("file")
+
+        if not title or not str(title).strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Title is required."
+            )
+        if not description or not str(description).strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Description is required."
+            )
+        if not category_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Category ID is required."
+            )
+        try:
+            category_id = int(category_id)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Category ID must be an integer."
+            )
+        if not location or not str(location).strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Location is required."
+            )
+
+        image_url = None
+        if file_obj and hasattr(file_obj, "filename") and file_obj.filename:
+            image_url = await service.save_complaint_image(file_obj)
+        elif form.get("image_url"):
+            image_url = str(form.get("image_url")).strip() or None
+
+        try:
+            complaint_data = ComplaintCreate(
+                title=str(title).strip(),
+                description=str(description).strip(),
+                category_id=category_id,
+                location=str(location).strip(),
+                image_url=image_url
+            )
+        except ValidationError as ve:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=ve.errors()
+            )
+    else:
+        body = await request.json()
+        try:
+            complaint_data = ComplaintCreate(**body)
+        except ValidationError as ve:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=ve.errors()
+            )
+
     return service.create_complaint(
         db=db,
-        complaint_data=complaint,
+        complaint_data=complaint_data,
         current_user=current_user
     )
+
+
+# =========================================================
+# UPLOAD COMPLAINT IMAGE
+# =========================================================
+
+@router.post(
+    "/upload-image",
+    status_code=status.HTTP_201_CREATED
+)
+async def upload_complaint_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    image_url = await service.save_complaint_image(file)
+    return {"image_url": image_url}
+
 
 
 # =========================================================

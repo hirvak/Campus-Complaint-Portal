@@ -59,20 +59,20 @@ export function Register() {
   const validateField = (name, value, currentFormData = formData, currentRole = role) => {
     switch (name) {
       case 'full_name': {
-        const val = value.trim();
+        const val = (value || '').trim();
         if (!val) return 'Full Name is required.';
         if (val.length < 2) return 'Full Name must be at least 2 characters.';
         if (!/^[A-Za-z\s]+$/.test(val)) return 'Full Name can only contain alphabets and spaces.';
         return '';
       }
       case 'email': {
-        const val = value.trim();
+        const val = (value || '').trim();
         if (!val) return 'Email address is required.';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return 'Please enter a valid email address (e.g. hirva@gmail.com).';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return 'Please enter a valid email address (e.g. user@domain.com).';
         return '';
       }
       case 'phone': {
-        const val = value.trim();
+        const val = (value || '').trim();
         if (val && !/^[6-9]\d{9}$/.test(val)) {
           return 'Phone number must be exactly 10 digits starting with 6-9.';
         }
@@ -93,7 +93,7 @@ export function Register() {
         return '';
       }
       case 'department': {
-        const val = value.trim();
+        const val = (value || '').trim();
         if (!val) return 'Department is required.';
         if (val.length < 2) return 'Department must be at least 2 characters.';
         return '';
@@ -262,42 +262,41 @@ export function Register() {
           </div>
         </div>
 
+        {/* Student Type (Shown only for Student) */}
+        {role === 'Student' && (
+          <div className="bg-[#FAF7F0] dark:bg-[#202B3D] p-3 rounded-[6px] border border-[#DED8CC] dark:border-[#344155] space-y-1">
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#10213A] dark:text-[#F8FAFC]">
+              Student Type
+            </label>
+            <div className="grid grid-cols-2 gap-3 pt-0.5">
+              <label className="flex items-center gap-2 text-xs text-[#10213A] dark:text-[#F8FAFC] font-semibold cursor-pointer">
+                <input
+                  type="radio"
+                  name="student_type"
+                  value="Campus"
+                  checked={formData.student_type === 'Campus'}
+                  onChange={handleChange}
+                  className="text-[#B51232] dark:text-[#C51F3D] focus:ring-[#B51232] dark:focus:ring-[#C51F3D]"
+                />
+                Campus Student
+              </label>
+              <label className="flex items-center gap-2 text-xs text-[#10213A] dark:text-[#F8FAFC] font-semibold cursor-pointer">
+                <input
+                  type="radio"
+                  name="student_type"
+                  value="Hostel"
+                  checked={formData.student_type === 'Hostel'}
+                  onChange={handleChange}
+                  className="text-[#B51232] dark:text-[#C51F3D] focus:ring-[#B51232] dark:focus:ring-[#C51F3D]"
+                />
+                Hostel Student
+              </label>
+            </div>
+          </div>
+        )}
+
         {/* Registration Form */}
         <form className="space-y-3.5" onSubmit={handleSubmit} noValidate>
-          
-          {/* Dynamic field: Student Type (Shown only for Student) */}
-          {role === 'Student' && (
-            <div className="bg-[#FAF7F0] dark:bg-[#202B3D] p-3 rounded-[6px] border border-[#DED8CC] dark:border-[#344155] space-y-1">
-              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#10213A] dark:text-[#F8FAFC]">
-                Student Type
-              </label>
-              <div className="grid grid-cols-2 gap-3 pt-0.5">
-                <label className="flex items-center gap-2 text-xs text-[#10213A] dark:text-[#F8FAFC] font-semibold cursor-pointer">
-                  <input
-                    type="radio"
-                    name="student_type"
-                    value="Campus"
-                    checked={formData.student_type === 'Campus'}
-                    onChange={handleChange}
-                    className="text-[#B51232] dark:text-[#C51F3D] focus:ring-[#B51232] dark:focus:ring-[#C51F3D]"
-                  />
-                  Campus Student
-                </label>
-                <label className="flex items-center gap-2 text-xs text-[#10213A] dark:text-[#F8FAFC] font-semibold cursor-pointer">
-                  <input
-                    type="radio"
-                    name="student_type"
-                    value="Hostel"
-                    checked={formData.student_type === 'Hostel'}
-                    onChange={handleChange}
-                    className="text-[#B51232] dark:text-[#C51F3D] focus:ring-[#B51232] dark:focus:ring-[#C51F3D]"
-                  />
-                  Hostel Student
-                </label>
-              </div>
-            </div>
-          )}
-
           {/* Full Name */}
           <div>
             <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#10213A] dark:text-[#F8FAFC] mb-1">
@@ -329,7 +328,7 @@ export function Register() {
             )}
           </div>
 
-          {/* Email */}
+          {/* Email Address */}
           <div>
             <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#10213A] dark:text-[#F8FAFC] mb-1">
               Email Address

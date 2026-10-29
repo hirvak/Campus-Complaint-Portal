@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import ComplaintStatusBadge from './ComplaintStatusBadge';
 import ComplaintPriorityBadge from './ComplaintPriorityBadge';
+import SlaBadge from './SlaBadge';
 import { ArrowUpRight, CheckCircle2, UserCheck } from 'lucide-react';
 import Button from './Button';
 
@@ -54,6 +55,7 @@ export function ComplaintTable({
                   <th className="py-3 px-3">LOCATION</th>
                   <th className="py-3 px-3">PRIORITY</th>
                   <th className="py-3 px-3">STATUS</th>
+                  <th className="py-3 px-3">SLA</th>
                   <th className="py-3 px-3">CREATED</th>
                   <th className="py-3 px-3 text-right">ACTION</th>
                 </tr>
@@ -78,6 +80,9 @@ export function ComplaintTable({
                     </td>
                     <td className="py-3.5 px-3">
                       <ComplaintStatusBadge status={c.status} />
+                    </td>
+                    <td className="py-3.5 px-3">
+                      <SlaBadge complaint={c} />
                     </td>
                     <td className="py-3.5 px-3 text-[#60708A] dark:text-[#AEB9C9]">
                       {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
@@ -115,9 +120,12 @@ export function ComplaintTable({
                 className="py-4 space-y-2 cursor-pointer hover:bg-[#FDF2F4]/50 dark:hover:bg-[#202B3D] p-2 rounded-[6px] transition-colors text-left"
                 onClick={() => navigate(`${rolePrefix}/complaints/${c.id}`)}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-xs font-bold text-[#60708A] dark:text-[#AEB9C9]">#{c.id}</span>
-                  <ComplaintStatusBadge status={c.status} />
+                  <div className="flex items-center gap-1.5">
+                    <SlaBadge complaint={c} compact={true} />
+                    <ComplaintStatusBadge status={c.status} />
+                  </div>
                 </div>
                 <h3 className="font-bold text-sm text-[#10213A] dark:text-[#F8FAFC] hover:text-[#B51232] dark:hover:text-[#C51F3D]">{c.title}</h3>
                 <p className="text-xs text-[#60708A] dark:text-[#AEB9C9]">{c.location} • {categoriesMap[c.category_id] || `Cat #${c.category_id}`}</p>

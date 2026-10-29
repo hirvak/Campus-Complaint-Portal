@@ -39,6 +39,8 @@ class NotificationType(str, Enum):
 
     COMPLAINT_REOPENED = "Complaint Reopened"
 
+    COMPLAINT_ESCALATED = "Complaint Escalated"
+
 class ComplaintHistoryAction(str, Enum):
 
     CREATED = "Created"
@@ -54,3 +56,7 @@ class ComplaintHistoryAction(str, Enum):
     CLOSED = "Closed"
 
     REOPENED = "Reopened"
+
+    ESCALATED = "Escalated"
+
+    SLA_UPDATED = "SLA Updated"

@@ -5,7 +5,8 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     DateTime,
-    Enum
+    Enum,
+    Boolean
 )
 from sqlalchemy.sql import func
 
@@ -88,6 +89,44 @@ class Complaint(Base):
         nullable=True
     )
 
+    sla_deadline = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True
+    )
+
+    is_escalated = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True
+    )
+
+    escalated_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    escalation_level = Column(
+        Integer,
+        default=0,
+        nullable=False
+    )
+
+    is_grandfathered = Column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
+    sla_cycle = Column(
+        Integer,
+        default=1,
+        nullable=False
+    )
+
+
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()
@@ -98,3 +137,13 @@ class Complaint(Base):
         server_default=func.now(),
         onupdate=func.now()
     )
+
+    @property
+    def sla_status(self) -> str:
+        from app.SLA.service import compute_sla_status
+        return compute_sla_status(self)
+
+    @property
+    def time_remaining_seconds(self) -> int | None:
+        from app.SLA.service import compute_time_remaining_seconds
+        return compute_time_remaining_seconds(self)
