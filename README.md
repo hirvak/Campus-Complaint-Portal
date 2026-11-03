@@ -1,4 +1,4 @@
-# CampusCare — Campus Complaint Portal
+# CampusCare : Campus Complaint Portal
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19.2.8-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
